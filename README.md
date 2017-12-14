@@ -57,6 +57,7 @@ files and folders yourselves:
 
     ~/fuzzy-vision/
     |-- server.py
+    |-- utils.py
     |-- static
     |   `-- styles
     |       `-- app.css
@@ -188,7 +189,7 @@ code:
 
             passed = True # for now
             if passed:
-                return redirect(url_for('predict', filename='test.png')) # for now
+                return redirect(url_for('predict', filename='test.png'))
             else:
                 return redirect(url_for('error'))
 
@@ -987,6 +988,116 @@ the labels. Here's one I did with a picture of boxes of orange juice.
 
 ![The model trying to predict orange juice](images/cartons.png)
 
+## Checkpoint! Separating Code Concerns
+
+We've come a long way from scratch. We should reconsider the large bulky
+monolithic component that is `server.py`. It contains the server logic for
+routing, generating file names, checking allowed file names and generating
+barcharts. This is fine for small projects but it doesn't scale to larger
+projects as you end up with a single massive file which makes it hard to
+navigate through. It also becomes confusing to unit test: should you load the
+server just to unit test the random name generator? Clearly not! So let's use
+the neglected `utils.py` to sperate the unit functions from the routes. All
+we are doing in this section is just moving code around making our workspace
+much cleaner.
+
+Let's move all the unnecessary variables and functions from `server.py` into
+`utils.py`. The server do not need to know the following variables and
+functions:
+
+### Imports
+
+* `import random`, only needed by random name generator.
+* `from werkzeug.utils import secure_filename`, see previous reason.
+* `from bokeh.plotting import figure`, only needed by barchart generator.
+* `from bokeh.embed import components`, see previous reason.
+* `from numpy import pi`, see previous reason.
+* `from imageio import imread`, only needed by the load and prepare function.
+
+### Variables
+
+* `ALLOWED_EXTENSIONS`, this is only used in the renaming function.
+* `LETTER_SET`, this is only used in the random name generation function.
+* `IMAGE_LABELS`, this is only used by the Bokeh barchart generator.
+
+### Functions
+
+* `generate_random_name()`, the server only calls this function.
+* `is_allowed_file()`, see previous reason.
+* `generate_barplot()`, see previous reason.
+* `load_and_prepare()`, see previous reason.
+
+In `utils.py`:
+
+    utils.py
+    ===
+    import random
+    from bokeh.plotting import figure
+    from bokeh.embed import components
+    from imageio import imread
+    from numpy import pi, squeeze
+    from werkzeug.utils import secure_filename
+
+    ALLOWED_EXTENSIONS = set(['png', 'bmp', 'jpg', 'jpeg', 'gif'])
+    LETTER_SET = list(set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'))
+    IMAGE_LABELS = ['Headphone', 'Mouse', 'Camera', 'Smartphone', 'Glasses',
+                    'Shoes', 'Watch', 'Laptop']
+
+
+    def is_allowed_file(filename):
+        """ Checks if a filename's extension is acceptable """
+        allowed_ext = filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        return '.' in filename and allowed_ext
+
+
+    def generate_random_name(filename):
+        """ Generate a random name for an uploaded file. """
+        ext = filename.split('.')[-1]
+        rns = [random.randint(0, len(LETTER_SET) - 1) for _ in range(3)]
+        chars = ''.join([LETTER_SET[rn] for rn in rns])
+
+        new_name = "{new_fn}.{ext}".format(new_fn=chars, ext=ext)
+        new_name = secure_filename(new_name)
+
+        return new_name
+
+
+    def load_and_prepare(filepath):
+        """ Load and prepares an image data for prediction """
+        image_data = imread(filepath)[:, :, :3]
+        image_data = image_data / 255.
+        image_data = image_data.reshape((-1, 128, 128, 3))
+        return image_data
+
+
+    def generate_barplot(predictions):
+        """ Generates script and `div` element of bar plot of predictions using
+        Bokeh
+        """
+        plot = figure(x_range=IMAGE_LABELS, plot_height=300, plot_width=400)
+        plot.vbar(x=IMAGE_LABELS, top=predictions, width=0.8)
+        plot.xaxis.major_label_orientation = pi / 2.
+
+        return components(plot)
+
+
+In `server.py`, just modify the imports:
+
+    server.py
+    ===
+    import os
+    from flask import Flask, flash, render_template, redirect, request, send_file, url_for
+    from keras.models import load_model
+    from numpy import squeeze
+    from utils import generate_barplot, generate_random_name, is_allowed_file, load_and_prepare
+
+    ...
+
+
+Now we have a cleaner server definition with only routes and a utility file
+which contaains all the functions that once used to pollute the sever routes.
+It is also now easy to unit test the utilities since we only need to import
+the functions from `utils.py` to be tested.
 
 [1]: https://bokeh.pydata.org/
 [2]: https://purecss.io/
