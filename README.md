@@ -29,11 +29,11 @@ trained to classify images from an online marketplace into 8 different labels.
 ## Setting Up your Workspace
 
 Let's begin by making a virtual environment in Python. I will be using Python
-3.5 but feel free to use Python 2.7 if you are more familiar. The code is
+2.7 but feel free to use Python 3.5 if you are more familiar. The code is
 mainly version-agnostic. In your terminal:
 
-    Terminal window
-    ===
+    # Terminal window
+
     $ mkdir ~/venvs/
     $ virtualenv ~/venvs/fuzzvis
     ... # some output messages
@@ -47,8 +47,8 @@ track. If not, you might want to install `python-virtualenv`.
 Let's also make a project folder to keep all the code in one place. I'm going
 to call it Fuzzy Vision, for lack of a better name. In your terminal:
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ mkdir ~/fuzzy-vision
     (fuzzvis) $ cd ~/fuzzy-vision
 
@@ -101,8 +101,8 @@ things missing. Doesn't mean it's a bad framework, as we will see shortly!
 Let's begin by installing Flask into your virtual environment. In your
 terminal:
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ pip install Flask==0.12.2
     ... # some output messages
 
@@ -111,8 +111,8 @@ terminal:
 
 We will start with a basic *Hello, World!* application. It's as easy as
 
-    server.py
-    ===
+    # server.py
+
     from flask import Flask
 
     app = Flask(__name__)
@@ -128,8 +128,8 @@ in `server.py` and just call `python server.py` in your terminal. Just to not
 have to do weird things to your computer, let's go with option 2. Add the
 following to the bottom of `server.py`.
 
-    server.py
-    ===
+    # server.py
+
     ...
 
     if __name__ == "__main__":
@@ -137,8 +137,8 @@ following to the bottom of `server.py`.
 
 Run it with
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ python test.py
     * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
@@ -170,8 +170,8 @@ Also we will need a HTML page to be rendered. Luckily, Flask has us covered
 with its `render_template()` function. We will create the templates later. In
 code:
 
-    server.py
-    ===
+    # server.py
+
     from flask import Flask, render_template, request, redirect, url_for
 
     app = Flask(__name__)
@@ -219,8 +219,8 @@ with lots of __blocks__ which will encapsulate the inner page contents. We will
 use this for all of our 3 pages. First, we define a basic layout, reducing the
 need to copy and paste headers and footers into each page template.
 
-    templates/layout.html
-    ===
+    # templates/layout.html
+
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -236,8 +236,8 @@ need to copy and paste headers and footers into each page template.
 Next, we define our home page, with a `<form>` tag to store the image upload
 HTML element.
 
-    templates/home.html
-    ===
+    # templates/home.html
+
     {% extends 'layout.html' %}
     {% block body %}
     <p>Upload an image and the algorithm will tell you what it is!</p>
@@ -255,9 +255,9 @@ file. This is to tell Flask that we are inheriting a parent HTML file called
 `layout.html` and replacing the `{% block body %}{% endblock %}` tags with
 the HTML we defined in the `templates/home.html` file.
 
-The `<form>` is also coded to have the `enctype=multipart/form-data` attribute.
-This is necessary for imagee uploading as files are passed as a separate `POST`
-variable.
+The `<form>` is also coded to have the `enctype="multipart/form-data"`
+attribute. This is necessary for image uploading as files are passed as a
+separate `POST` variable.
 
 The filename does not have to match the route names in our `server.py`. Let's
 create the remaining templates. We will just have placeholder text for now
@@ -265,8 +265,8 @@ until we code the actual logic of the predictions. !!! ASIDE !!!
 
 The results page:
 
-    templates/predict.html
-    ===
+    # templates/predict.html
+
     {% extends 'layout.html' %}
     {% block body %}
     <p>Our algorithm thinks it is a Smartphone!</p>
@@ -277,8 +277,8 @@ The results page:
 
 The error page:
 
-    templates/error.html
-    ===
+    # templates/error.html
+
     {% extends 'layout.html' %}
     {% block body %}
     <p>
@@ -320,8 +320,8 @@ For the sake of ease, we will use a typical filesystem storage. When images are
 uploaded, it just gets stored in a folder somewhere on the server (or computer)
 hosting the web application. Straight to the code!
 
-    server.py
-    ===
+    # server.py
+
     import os
     from flask import Flask, flash, render_template, redirect, request, url_for
 
@@ -378,8 +378,8 @@ will require a secret key to be defined. This value has to be unique and
 ideally hard to guess. For now, we will use a string of characters. We will
 also need to create the upload directory for the code to work:
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ mkdir -p /tmp/fuzzvis/
 
 Notice that before the redirects, we use a `flash()` function. This comes from
@@ -388,8 +388,8 @@ error messages are often displayed. We will need to update our templates for
 this to work properly. Since this only happens in the home page, we just need
 to update the home template.
 
-    templates/home.html
-    ===
+    # templates/home.html
+
     {% extends 'layout.html' %}
     {% block body %}
 
@@ -411,8 +411,6 @@ to update the home template.
     </form>
     {% endblock %}
 
-![Flash error listed above upload form](images/noupload.png)
-
 Flash messages come in lists, hence why there is a `for` iterator. You can
 style this however you wish, however, for the purposes of this tutorial, we
 will just focus on functionality. !!! ASIDE !!!
@@ -423,6 +421,8 @@ a file on the browser. You should land on the predict route with the template
 rendering. Now try uploading an empty file, you should end up back at the home
 page with an error message.
 
+![Flash error listed above upload form](images/noupload.png)
+
 ---
 
 ## Adding the Image Serving Functionality
@@ -432,8 +432,8 @@ images. You can aapproach this in many ways but the easiest (and simplest) way
 is to just serve an image as is and use that route in other pages in an `<img>`
 source attribute. Let's create that route.
 
-    server.py
-    ===
+    # server.py
+
     from flask import Flask, flash, render_template, redirect, request, send_file, url_for
     ...
 
@@ -465,8 +465,8 @@ computer turns off). Instead, we should keep it as a global variable in
 users who find our code are not aware of our server filesystem structure.
 Coding that in `server.py`:
 
-    server.py
-    ===
+    # server.py
+
     import os
     from flask import Flask, flash, render_template, redirect, request, send_file, url_for
 
@@ -496,11 +496,12 @@ Coding that in `server.py`:
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
 If you try to run now, you should get a `KeyError`. This is because we have not
-set the `UPLOAD_FOLDER` environment variable in our system. Let's update our environment variables temporarily in the terminal to get the server working
+set the `UPLOAD_FOLDER` environment variable in our system. Let's update our
+environment variables temporarily in the terminal to get the server working
 again.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ export UPLOAD_FOLDER="/tmp/fuzzvis"
 
 This is a temporary change to the environment variables; the variables will
@@ -516,8 +517,8 @@ guess in production. For now we can just copy the value to the environment
 vriable in the terminal. __Note: do not close your terminal window or you will
 need to type in the variables again!__
 
-    server.py
-    ===
+    # server.py
+
     import os
     from flask import Flask, flash, render_template, redirect, request, send_file, url_for
 
@@ -529,8 +530,8 @@ need to type in the variables again!__
 
 Let's update our environment variables temporarily in the terminal.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ export SECRET_KEY="supertopsecretprivatekey"
 
 Great, that looks much cleaner and reusable. Next, we should rethink the file
@@ -550,8 +551,8 @@ First, we need to create function that will check for the allowed extensions
 for our web application. Let's allow typical image extensions like `jpeg`,
 `jpg`, `png`, `gif` and `bmp`. Here is the function written out.
 
-    server.py
-    ===
+    # server.py
+
     ...
 
     ALLOWED_EXTENSIONS = set(['png', 'bmp', 'jpg', 'jpeg', 'gif'])
@@ -572,8 +573,8 @@ Now, we can  write a function that will generate the filenames. We need to keep
 the original extensions of the uploaded file so let's pass the uploaded
 filename as an argument.
 
-    server.py
-    ===
+    # server.py
+
     import random
 
     ...
@@ -594,8 +595,8 @@ filenames when a user uploads a file. To make it a more secure, we will use
 `werkzeug.utils`'s API function `secure_filename()`. You can never be too sure
 what happens ;)
 
-    server.py
-    ===
+    # server.py
+
     from werkzeug.utils import secure_filename
 
     ...
@@ -650,8 +651,8 @@ just use the very basic functions: generating a web-friendly barchart plot.
 
 First and foremost is to install Bokeh into your virtual environment.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ pip install bokeh==0.12.10
     ... # some output messages
 
@@ -660,8 +661,8 @@ page since we will be generating the graphs from the backend. __Note: Bokeh
 needs both CSS and `pip` versions to be identical. If you have version 0.12.10
 installed in `pip`, you must use the CSS library version 0.12.10__.
 
-    templates/layout.html
-    ===
+    # templates/layout.html
+
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -679,8 +680,8 @@ variable which makes the process of drawing the barcharts a little easier. In
 the code:
 
 
-    server.py
-    ===
+    # server.py
+
     ...
 
     from numpy import pi
@@ -729,9 +730,9 @@ size of the plot (400px by 300px). Then, we plot vertical bars by using the
 `plot.vbar()` which takes the x-axis values, the height of each bar as the
 argument `top=`, and the width of the bars which we set to 0.8. Since there are
 quite a few labels in a small width, we will rotate the x-axis labels by 90
-degrees (or $\frac{\pi}{2}$ radians). We then return the Bokeh components back to the
-calling function. The `components()` function returns a tuple of a generated
-JavaScript and the `<div>` elements for the plot.
+degrees (or $\frac{\pi}{2}$ radians). We then return the Bokeh components back
+to the calling function. The `components()` function returns a tuple of a
+generated JavaScript and the `<div>` elements for the plot.
 
 ### Predict Route Update Explanation
 
@@ -750,8 +751,8 @@ that we use a `{{ * | safe }}` tag to make the HTML render properly and
 securely. Lastly, we import some extra JavaScript that will be used by Bokeh
 to function properly.
 
-    templates/predict.html
-    ===
+    # templates/predict.html
+
     {% extends 'layout.html' %}
     {% block body %}
     <p>Our algorithm thinks the following...</p>
@@ -769,9 +770,9 @@ to function properly.
 
 If we test the `/predict/<filename>` URL, we should be greeted with a Bokeh
 plot. Feel free to play around with the plot controls and understand it. To see
-a different graph, just change the decimal values in the list when calling
-`generate_barplot()`. Note that the values on the graph don't mean anything as
-of this moment.
+a different graph, just change the decimal values in the `predictions` list
+before calling `generate_barplot()`. Note that the values on the graph don't
+mean anything as of this moment.
 
 ![Prediction page showing Bokeh plot](images/bokehplot.png)
 
@@ -786,8 +787,8 @@ just draw something simple up. To add your own CSS, you should use the static
 file `static/css/style.css` and link it into the `<head>` of your HTML layout.
 Flask has a way of including static files in the templating engine:
 
-    templates/layout.html
-    ===
+    # templates/layout.html
+
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -818,14 +819,14 @@ interfaces with TensorFlow on the backend, we will need to install TensorFlow.
 However, this is not a trivial process. The [TensorFlow installation guide][4]
 has all the information you need to install TensorFlow on your platform. For
 the purposes of this tutorial, we will not go down the rabbit hole of
-installing GPU or CPU  optimized TensorFlow. Instead, we will use a unoptimized
+installing GPU or CPU optimized TensorFlow. Instead, we will use an unoptimized
 version, which is actually good enough since we are not doing any model
-training, only prediction. To load pretrained models, we need `h5py` and we
-will need an extra library to load image files into a desireable format;
-and that is `imageio`.
+training, only prediction. To load pretrained models, we need the `h5py`
+package. Also we will need an extra package to load image files into `numpy`
+matrix format; and that is `imageio`.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ pip install tensorflow==1.3.0
     ... # some output messages
 
@@ -844,19 +845,19 @@ as you might accidentally push the entire model file up to GitHub (or whatever
 online code base you use). This might be fine with the model we will be using
 in this tutorial but industrial-grade pre-trained models have huge file sizes.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ wget https://s3.amazonaws.com/syaffers-stuff/models/SouqNet128v2_gpu.h5
     (fuzzvis) $ mkdir -p /tmp/models
     (fuzzvis) $ mv SouqNet128v2_gpu.h5 /tmp/models/
 
 The model was trained on pictures of size 128px by 128px so you will need to
 download images of that size for this next part; [Google Images][5] might help,
-try and get a JPG image for now. Fire up your `python` interpreter, we are
+try and get a JPG image for now. Fire up your Python interpreter; we are
 going to play with the model before continuing on with the web application.
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ python
     >>> from keras.models import load_model
     Using TensorFlow backend.
@@ -878,8 +879,8 @@ thought of as list of tensors or a preceding order. A single vector is a
 first-order tensor (a list of zero-order tensors, which are just numbers), a
 matrix is a second-order tensor (list of vectors), and so on. An image has two
 spatial dimensions: a width and a height determined by the number of pixels in
-the image meaning that it should have lots of columns of pixels, just like a
-second-order tensor. So why do we need a third order tensor to represent
+the image. This means that it should have lots of columns of pixels, just like
+a second-order tensor. So why do we need a third order tensor to represent
 images? Well, images have different intensity values for each of the 3 (or 4th
 alpha) channels: R, G and B. This means that an image is comprised of 3 layers
 of second-order tensors (or matrices). The graphic below should help you
@@ -891,30 +892,30 @@ Let's continue. We need to reshape the input image so it's a fourth-order
 tensor; think of it as a list of third-order tensors. This is how the model was
 built to handle inputs during training, it's a technical thing.
 
-    Terminal window
-    ===
+    # Terminal window
+
     >>> image = image / 255.
     >>> model.predict(image.reshape(-1, 128, 128, 3))
     array([[ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.]], dtype=float32)
 
 The division term before the prediction is to normalize the pixels to between
 0 and 1 as this is how the model was originally trained. The output you see is
-a list of predictions, and the values are probabilities of a particular label.
-You can think of it as the confidence that the model has for a particular
-label. There are 8 labels, so there are 8 values in the output; we see one
-value which is exactly 1 and the rest are 0s. This means that the model is 100%
-confident that the label is "Label #2", which is a computer mouse. The list of
-labels are provided in an earlier section: Generating Barcharts with Bokeh. All
-we need to do with these values is pass it back to our `generate_barchart()`
-function and we will get the distribution of confidence values for each label.
+an array of predictions, and the values are probabilities of a particular
+label. You can think of it as the confidence that the model has for each label.
+There are 8 labels, so there are 8 values in the output; we see one value which
+is exactly 1 and the rest are 0s. This means that the model is 100% confident
+that the label is "Label #2", which is a computer mouse. The list of labels are
+provided in an earlier section: Generating Barcharts with Bokeh. All we need to
+do with these values is pass it back to our `generate_barchart()` function and
+we will get the distribution of confidence values for each label.
 
 Let's jump back into the server code and load that model into the server. When
 the server runs, it loads the model into the backend, ready to predict when
 executed. To keep with the security refactoring updates we did earlier, we will
 provide the path to the model file in an environment variable.
 
-    server.py
-    ===
+    # server.py
+
     ...
 
     from numpy import pi, squeeze
@@ -952,7 +953,7 @@ We start with some additional imports to introduce the new functions to load
 images the model. We then define the `NEURAL_NET_MODEL_PATH` and the acutal
 `NEURAL_NET` object. The main engine is in the `/predict/<filename>` route. We
 first form the filesystem path to the uploaded file and read the image. We
-do a special trick here while reading the image: `imread(image_path)[:, :, :3]`
+do a hack-y trick here while reading the image: `imread(image_path)[:, :, :3]`
 to handle PNG images. Usually PNG images have a fourth channel which is the
 transparency channel. The model was not trained to handle this originally and
 so we have to hack the image reading process by take only the first three
@@ -963,8 +964,8 @@ this list is nested, we use `squeeze()` to flatten the nesting and pass it to
 `generate_barplot()`. Don't forget to set the `NEURAL_NET_MODEL_PATH` in the
 environment variables:
 
-    Terminal window
-    ===
+    # Terminal window
+
     (fuzzvis) $ export NEURAL_NET_MODEL_PATH='/tmp/models/SouqNet128v2_gpu.h5'
 
 If you run the server now and upload a 128px by 128px image, you should get a
