@@ -557,7 +557,7 @@ for our web application. Let's allow typical image extensions like `jpeg`,
 
     ALLOWED_EXTENSIONS = set(['png', 'bmp', 'jpg', 'jpeg', 'gif'])
 
-    def allowed_file(filename):
+    def is_allowed_file(filename):
         """ Checks if a filename's extension is acceptable """
         allowed_ext = filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
         return '.' in filename and allowed_ext
@@ -571,43 +571,45 @@ future. Non-route functions should also come before the route functions.
 
 Now, we can  write a function that will generate the filenames. We need to keep
 the original extensions of the uploaded file so let's pass the uploaded
-filename as an argument.
+filename as an argument. To make it a more secure, we will use a utility
+function `secure_filename()` from `werkzeug.utils`. You can never be too sure
+what happens ;).
 
     server.py
     ===
     import random
+    from werkzeug.utils import secure_filename
 
     ...
 
     LETTER_SET = list(set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'))
 
-    def random_name(filename):
+    def generate_random_name(filename):
         """ Generate a random name for an uploaded file. """
         ext = filename.split('.')[-1]
         rns = [random.randint(0, len(LETTER_SET) - 1) for _ in range(3)]
-        name = ''.join([LETTER_SET[rn] for rn in rns])
-        return "{new_fn}.{ext}".format(new_fn=name, ext=ext)
+        chars = ''.join([LETTER_SET[rn] for rn in rns])
 
+        new_name = "{new_fn}.{ext}".format(new_fn=chars, ext=ext)
+        new_name = secure_filename(new_name)
+
+        return new_name
     ...
 
 Now, we can use these functions to check for bogus filenames and also create
-filenames when a user uploads a file. To make it a more secure, we will use
-`werkzeug.utils`'s API function `secure_filename()`. You can never be too sure
-what happens ;)
+filenames when a user uploads a file.
 
     server.py
     ===
-    from werkzeug.utils import secure_filename
-
     ...
 
     @app.route('/', methods=['GET', 'POST'])
     def home():
         ... # truncated part of the function
-            if image_file and allowed_file(image_file.filename):
+            if image_file and is_allowed_file(image_file.filename):
                 passed = False
                 try:
-                    filename = secure_filename(random_name(image_file.filename))
+                    filename = generate_random_name(image_file.filename)
                     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     image_file.save(filepath)
                     passed = True
@@ -927,13 +929,20 @@ provide the path to the model file in an environment variable.
 
     ...
 
+    def load_and_prepare(filepath):
+        """ Load and prepares an image data for prediction """
+        image_data = imread(filepath)[:, :, :3]
+        image_data = image_data / 255.
+        image_data = image_data.reshape((-1, 128, 128, 3))
+        return image_data
+
+    ...
+
     @app.route('/predict/<filename>', methods=['GET'])
     def predict(filename):
         image_url = url_for('images', filename=filename)
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image_data = imread(image_path)[:, :, :3]
-        image_data = image_data / 255.
-        image_data = image_data.reshape((-1, 128, 128, 3))
+        image_data = load_and_prepare(image_path)
 
         predictions = NEURAL_NET.predict_proba(image_data)
         script, div = generate_barplot(squeeze(predictions))
@@ -948,19 +957,23 @@ provide the path to the model file in an environment variable.
     ...
 
 We start with some additional imports to introduce the new functions to load
-images the model. We then define the `NEURAL_NET_MODEL_PATH` and the acutal
-`NEURAL_NET` object. The main engine is in the `/predict/<filename>` route. We
-first form the filesystem path to the uploaded file and read the image. We
-do a hack-y trick here while reading the image: `imread(image_path)[:, :, :3]`
-to handle PNG images. Usually PNG images have a fourth channel which is the
-transparency channel. The model was not trained to handle this originally and
-so we have to hack the image reading process by take only the first three
-channels and exclude the alpha channel. The image data is then normalized to
-between 0 and 1, reshaped, and fed into the neural network's `predict()`
-function. If everything goes well, we should get a list of predictions. Since
-this list is nested, we use `squeeze()` to flatten the nesting and pass it to
-`generate_barplot()`. Don't forget to set the `NEURAL_NET_MODEL_PATH` in the
-environment variables:
+images the model. We then define the `NEURAL_NET_MODEL_PATH` and the actual
+`NEURAL_NET` object. The main engine is in the `/predict/<filename>` route.
+
+We then define a `load_and_prepare()` function to load and prepare the images
+to be predicted by the Keras model. First we read the image from the filesystem
+into  `numpy` matrix. We must do a hack-y trick here while reading the image:
+`imread(image_path)[:, :, :3]` to handle PNG images. Usually PNG images have a
+fourth channel which is the transparency channel. The model was not trained to
+handle this originally and so we have to hack the image reading process by take
+only the first three channels and exclude the alpha channel. The image data is
+then normalized to between 0 and 1, reshaped, and returned.
+
+In the `/predict/<filename>` route, the prepared image is fed into the neural
+network's `predict()` function. If everything goes well, we should get a list
+of predictions. Since this list is nested, we use `squeeze()` to flatten the
+nesting and pass it to `generate_barplot()`. Don't forget to set the
+`NEURAL_NET_MODEL_PATH` as an environment variable:
 
     Terminal window
     ===
