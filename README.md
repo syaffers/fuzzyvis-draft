@@ -1232,6 +1232,53 @@ Now if you upload a file of any size, the system should automatically resize
 the input image down and crop it to a 128px by 128px thumbnail. This makes the
 application much more accessible to users who have non-"standard" size images.
 
+## Going Forward
+
+This is a good start into making web applications that use machine learning
+tools in the backend. It is still, however, a start. There are many pitfalls
+that can make this application not scale into production.
+
+The Keras and TensorFlow installation was unoptimized for the machine making it
+relatively slow compared to an optimized TensorFlow installation that makes use
+of fast math libraries and C optimizations. When multiple users upload an image 
+for prediction, the server can stall and hold users at the upload page (since
+it  has to complete the resizinga nd prediction first). This is similarly true
+for the image scaling function that we just implemented. By compiling 
+TensorFlow from source and using a faster library like `pillow-simd`, this wait
+time can be reduced.
+
+There is another way to go about handling this issue. We can implement an 
+asynchronous method that defers the heavy lifting of prediction and image
+resize to a subprocess without holding back users on the upload page. This way,
+when many users decide to use the service simultaneously, the long processing
+times can be distributed over several compute cores and the server can render
+the prediction page with a loading GIF while it does the processing behind the 
+scenes.
+
+In production, we should also consider serving the web application on
+production-ready server applications like Nginx. This allows the app to focus
+on serving the routes and the tasks separately from handling user connections
+and other server-related things.
+
+Bokeh has interactive capabilities on the web which makes it particularly
+useful for very complex visualizations. For example, we could add a hover
+functionality to give users the actual prediction probabilties. We could also
+add a drag-and-drop JavaScript rather than ye olde upload button in the
+frontend to make it fancy.
+
+Keras has pre-trained models from many popular image classification works like
+VGGNet, ResNet, aand MobileNet. These are maybe more suited for general purpose
+image classification as it can predict more than the 8 labels that SouqNet was
+originally trained on. You will have to make changes to support image sizes and
+reducing to only showing the top 10 predicted labels for the barchart but
+otherwise, the core functionality is similar.
+
+## Final Words
+
+I hope you have enjoyed creating your own image classification web application.
+If you made something awesome, do tweet it to me [@syaffers][8] and I'd be
+happy to give a comment or two about it. A similar code structure for this 
+tutorial can be found in my GitHub repository called [souqnet-app][9].
 
 [1]: https://bokeh.pydata.org/
 [2]: https://purecss.io/
@@ -1240,3 +1287,5 @@ application much more accessible to users who have non-"standard" size images.
 [5]: https://images.google.com/
 [6]: https://en.wikipedia.org/wiki/Image_scaling#Algorithms
 [7]: https://help.ubuntu.com/community/EnvironmentVariables
+[8]: https://twitter.com/syaffers/
+[9]: https://github.com/syaffers/souqnet-app/
