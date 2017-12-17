@@ -981,10 +981,12 @@ nesting and pass it to `generate_barplot()`. Don't forget to set the
     (fuzzvis) $ export NEURAL_NET_MODEL_PATH='/tmp/models/SouqNet128v2_gpu.h5'
 
 If you run the server now and upload a 128px by 128px image, you should get a
-prediction of the image that you uploaded in the barcharts. That's the home
-stretch! Congratulations, you haave now built your own image classifier web
-application! For fun, upload into the classfier an image that is not in any of
-the labels. Here's one I did with a picture of boxes of orange juice.
+prediction of the image that you uploaded in the barcharts. In a later section
+we will look at a basic implementation that will allow us to upload an image of
+a non-fixed size. Congratulations, you have now built your own image classifier 
+web application! For fun, upload into the classfier an image that is not in any 
+of the predefined labels. Here's one I did with a picture of boxes of orange 
+juice.
 
 ![The model trying to predict orange juice](images/cartons.png)
 
@@ -1099,9 +1101,142 @@ which contaains all the functions that once used to pollute the sever routes.
 It is also now easy to unit test the utilities since we only need to import
 the functions from `utils.py` to be tested.
 
+
+## (Bonus section) Accepting Images of Any Size
+
+Everything seems to be working great and you are ready to show it off to your
+peers. But, you ask that they upload an image of 128px by 128px which not many
+people will have. This is a slight drawback in the implementation of the code
+but one that can be remedied with a simple solution: take an image of any size,
+resize and crop to fit a box of 128px by 128px and perform prediction on the
+resized image.
+
+Unfortunately, images have different focal points and finding the subject of
+the image is not trivial. To demonstrate a fairly simple approach, let's just
+assume that the subject of an image is located somewhere in the middle of the
+image. So the algorithm is roughly as follows:
+
+* if the image is square (i.e. width is equal to height), then just rescale
+down to 128px by 128px,
+* otherwise, resize the shorter dimension of an image down to 128px, either the
+height or the width,
+* crop the longer dimension down to 128px while targeting the center of the
+image.
+
+Here's an image to show the algorithm at work.
+
+![Rescaling and cropping a wide image to a 128px square](images/rescale.png)
+
+There is a consideration to be made here: what kind of scaling algorithm should 
+we use? We have the options of nearest neighbor, bilinear, bicubic, etc. To 
+maintain the image features as we scale down, we will use bicubic scaling. Feel 
+free to experiment with [other methods][6].
+
+Let's code that into `utils.py`.
+
+    utils.py
+    ===
+    from PIL import Image
+
+    ...
+
+    def make_thumbnail(filepath):
+        """ Converts input image to 128px by 128px thumbnail if not that size
+        and save it back to the source file """
+        img = Image.open(filepath)
+        thumb = None
+        w, h = img.size
+
+        # if it is exactly 128x128, do nothing
+        if w == 128 and h == 128:
+            return True
+
+        # if the width and height are equal, scale down
+        if w == h:
+            thumb = img.resize((128, 128), Image.BICUBIC)
+            thumb.save(filepath)
+            return True
+
+        # when the image's width is smaller than the height
+        if w < h:
+            # scale so that the width is 128px
+            ratio = w / 128.
+            w_new, h_new = 128, int(h / ratio)
+            thumb = img.resize((w_new, h_new), Image.BICUBIC)
+
+            # crop the excess
+            top, bottom = 0, 0
+            margin = h_new - 128
+            top, bottom = margin // 2, 128 + margin // 2
+            box = (0, top, 128, bottom)
+            cropped = thumb.crop(box)
+            cropped.save(filepath)
+            return True
+
+        # when the image's height is smaller than the width
+        if h < w:
+            # scale so that the height is 128px
+            ratio = h / 128.
+            w_new, h_new = int(w / ratio), 128
+            thumb = img.resize((w_new, h_new), Image.BICUBIC)
+
+            # crop the excess
+            left, right = 0, 0
+            margin = w_new - 128
+            left, right = margin // 2, 128 + margin // 2
+            box = (left, 0, right, 128)
+            cropped = thumb.crop(box)
+            cropped.save(filepath)
+            return True
+        return False
+
+We should update the server code so that this is done when the image is
+uploaded and before it gets predicted.
+
+
+
+    server.py
+    ===
+    import os
+    from flask import Flask, flash, render_template, redirect, request, send_file, url_for
+    from keras.models import load_model
+    from numpy import squeeze
+    from utils import generate_barplot, generate_random_name, is_allowed_file, load_and_prepare, make_thumbnail
+
+    ...
+
+    @app.route('/', methods=['GET', 'POST'])
+    def home():
+        ... # truncated part of the function
+
+        # if the file is "legit"
+        if image_file:
+            passed = False
+            try:
+                filename = generate_random_name(image_file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image_file.save(filepath)
+                passed = make_thumbnail(filepath)
+            except Exception:
+                passed = False
+
+            if passed:
+                return redirect(url_for('predict', filename=filename))
+            else:
+                flash('An error occurred, try again.')
+                return redirect(request.url)
+
+    ...
+
+Now if you upload a file of any size, the system should automatically resize
+the input image down and crop it to a 128px by 128px thumbnail. This makes the
+application much more accessible to users who have non-"standard" size images.
+
+
 [1]: https://bokeh.pydata.org/
 [2]: https://purecss.io/
 [3]: https://fonts.google.com/
 [4]: https://www.tensorflow.org/install/
 [5]: https://images.google.com/
+[6]: https://en.wikipedia.org/wiki/Image_scaling#Algorithms
 [7]: https://help.ubuntu.com/community/EnvironmentVariables
