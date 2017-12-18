@@ -1232,7 +1232,7 @@ Now if you upload a file of any size, the system should automatically resize
 the input image down and crop it to a 128px by 128px thumbnail. This makes the
 application much more accessible to users who have non-"standard" size images.
 
-## Going Forward
+## Ideas for Going Forward
 
 This is a good start into making web applications that use machine learning
 tools in the backend. It is still, however, a start. There are many pitfalls
@@ -1242,7 +1242,7 @@ The Keras and TensorFlow installation was unoptimized for the machine making it
 relatively slow compared to an optimized TensorFlow installation that makes use
 of fast math libraries and C optimizations. When multiple users upload an image 
 for prediction, the server can stall and hold users at the upload page (since
-it  has to complete the resizinga nd prediction first). This is similarly true
+it has to complete the resizing and prediction first). This is similarly true
 for the image scaling function that we just implemented. By compiling 
 TensorFlow from source and using a faster library like `pillow-simd`, this wait
 time can be reduced.
@@ -1253,21 +1253,26 @@ resize to a subprocess without holding back users on the upload page. This way,
 when many users decide to use the service simultaneously, the long processing
 times can be distributed over several compute cores and the server can render
 the prediction page with a loading GIF while it does the processing behind the 
-scenes.
+scenes. The uploading and serving of images can also be quickened by using a
+cache like Redis via an AWS S3 online bucket.
 
 In production, we should also consider serving the web application on
 production-ready server applications like Nginx. This allows the app to focus
 on serving the routes and the tasks separately from handling user connections
-and other server-related things.
+and other server-related things. We could also collect submitted images and ask
+users to click a button to label the images. This could easily be upgraded into
+an image labeling application which can be distributed to lots of people for
+human labeling. In this case, we will need a database in the back to
+persistently store labels.
 
 Bokeh has interactive capabilities on the web which makes it particularly
 useful for very complex visualizations. For example, we could add a hover
-functionality to give users the actual prediction probabilties. We could also
+functionality to show users the actual prediction probabilities. We could also
 add a drag-and-drop JavaScript rather than ye olde upload button in the
 frontend to make it fancy.
 
 Keras has pre-trained models from many popular image classification works like
-VGGNet, ResNet, aand MobileNet. These are maybe more suited for general purpose
+VGGNet, ResNet, and MobileNet. These are maybe more suited for general purpose
 image classification as it can predict more than the 8 labels that SouqNet was
 originally trained on. You will have to make changes to support image sizes and
 reducing to only showing the top 10 predicted labels for the barchart but
