@@ -29,7 +29,7 @@ trained to classify images from an online marketplace into 8 different labels.
 ## Setting Up your Workspace
 
 Let's begin by making a virtual environment in Python. I will be using Python
-2.7 but feel free to use Python 3.5 if you are more familiar. The code is
+`2.7` but feel free to use Python `3.5` if you are more familiar. The code is
 mainly version-agnostic. In your terminal:
 
     Terminal window
@@ -42,7 +42,9 @@ mainly version-agnostic. In your terminal:
     /home/syafiq/venvs/bin/pip
 
 If you see something similar in your terminal window, you are on the right
-track. If not, you might want to install `python-virtualenv`.
+track. If not, you might want to install `python-virtualenv`. It helps to have
+[Anaconda Python][10] installed since you get a better virtual environment
+manager, IMO, with `conda-env`.
 
 Let's also make a project folder to keep all the code in one place. I'm going
 to call it Fuzzy Vision, for lack of a better name. In your terminal:
@@ -1248,13 +1250,14 @@ TensorFlow from source and using a faster library like `pillow-simd`, this wait
 time can be reduced.
 
 There is another way to go about handling this issue. We can implement an 
-asynchronous method that defers the heavy lifting of prediction and image
-resize to a subprocess without holding back users on the upload page. This way,
-when many users decide to use the service simultaneously, the long processing
-times can be distributed over several compute cores and the server can render
-the prediction page with a loading GIF while it does the processing behind the 
-scenes. The uploading and serving of images can also be quickened by using a
-cache like Redis via an AWS S3 online bucket.
+asynchronous method (using a task distributor like `celery`) that defers the
+heavy lifting of prediction and image resize to a subprocess without holding
+back users on the upload page. This way, when many users decide to use the
+service simultaneously, the long processing times can be distributed over
+several compute cores and the server can render the prediction page with a
+loading GIF while it does the processing behind the scenes. The uploading and
+serving of images can also be quickened by using a cache like Redis via an AWS
+S3 online bucket.
 
 In production, we should also consider serving the web application on
 production-ready server applications like Nginx. This allows the app to focus
@@ -1294,3 +1297,4 @@ tutorial can be found in my GitHub repository called [souqnet-app][9].
 [7]: https://help.ubuntu.com/community/EnvironmentVariables
 [8]: https://twitter.com/syaffers/
 [9]: https://github.com/syaffers/souqnet-app/
+[10]: https://www.anaconda.com/download/
